@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PedsVitals 3D — Master Pediatric Vitals</title>
+    <meta name="description" content="Progressive learning game to master pediatric vital signs step by step." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <canvas id="bg3d" aria-hidden="true"></canvas>
+
+    <div id="app">
+      <!-- Simple Header -->
+      <header class="game-header">
+        <div class="header-content">
+          <div class="logo-container">
+            <div class="logo-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3.1 10.6C2.7 6.9 5.7 4 9.1 4c1.9 0 3.6.9 4.7 2.3C15 4.9 16.7 4 18.6 4 22 4 25 6.9 24.6 10.6c-.5 4.6-4.9 8.3-9.1 10.7-.9.5-1.9.5-2.8 0C8 18.9 3.6 15.2 3.1 10.6Z" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h1 class="logo-title">PedsVitals</h1>
+          </div>
+          <button id="btnSound" class="header-btn">🔊</button>
+        </div>
+      </header>
+
+      <!-- Main Game Area -->
+      <main class="main-container">
+
+        <!-- Topic Selection Screen -->
+        <div id="topicScreen" class="game-screen">
+          <h2 class="screen-title">Choose Your Focus</h2>
+          <p class="screen-subtitle">Master one vital sign at a time</p>
+
+          <div class="topics-grid">
+            <button class="topic-card" data-topic="hr-awake">
+              <div class="topic-icon">💗</div>
+              <div class="topic-name">Heart Rate (Awake)</div>
+              <div class="topic-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" data-topic="hr-awake" style="width: 0%"></div>
+                </div>
+              </div>
+            </button>
+
+            <button class="topic-card" data-topic="hr-sleep">
+              <div class="topic-icon">😴</div>
+              <div class="topic-name">Heart Rate (Sleep)</div>
+              <div class="topic-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" data-topic="hr-sleep" style="width: 0%"></div>
+                </div>
+              </div>
+            </button>
+
+            <button class="topic-card" data-topic="rr">
+              <div class="topic-icon">🫁</div>
+              <div class="topic-name">Respiratory Rate</div>
+              <div class="topic-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" data-topic="rr" style="width: 0%"></div>
+                </div>
+              </div>
+            </button>
+
+            <button class="topic-card" data-topic="sbp">
+              <div class="topic-icon">🩺</div>
+              <div class="topic-name">Blood Pressure</div>
+              <div class="topic-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" data-topic="sbp" style="width: 0%"></div>
+                </div>
+              </div>
+            </button>
+
+            <button class="topic-card" data-topic="temp">
+              <div class="topic-icon">🌡️</div>
+              <div class="topic-name">Temperature</div>
+              <div class="topic-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" data-topic="temp" style="width: 0%"></div>
+                </div>
+              </div>
+            </button>
+
+            <button class="topic-card" data-topic="approach">
+              <div class="topic-icon">👶</div>
+              <div class="topic-name">Assessment Approach</div>
+              <div class="topic-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" data-topic="approach" style="width: 0%"></div>
+                </div>
+              </div>
+            </button>
+
+            <button class="topic-card locked" data-topic="combined">
+              <div class="topic-icon">🏆</div>
+              <div class="topic-name">Combined Practice</div>
+              <div class="topic-subtitle">Unlock by mastering individual topics</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Learning Screen -->
+        <div id="learnScreen" class="game-screen hidden">
+          <button class="back-btn" id="backToTopics">← Back</button>
+
+          <div class="learn-header">
+            <h2 id="learnTitle" class="screen-title">Heart Rate (Awake)</h2>
+            <div class="progress-indicator">
+              <span id="progressText">0/8 mastered</span>
+            </div>
+          </div>
+
+          <!-- Study Mode -->
+          <div id="studyMode" class="learn-content">
+            <p class="instructions">Study these values, then test yourself</p>
+            <div id="studyCards" class="study-grid">
+              <!-- Cards will be generated here -->
+            </div>
+            <button id="startPractice" class="primary-btn">Start Practice →</button>
+          </div>
+
+          <!-- Practice Mode Selection -->
+          <div id="practiceMode" class="learn-content hidden">
+            <div class="game-modes">
+              <h3 class="mode-title">Choose Practice Mode</h3>
+              <div class="mode-grid">
+                <button class="mode-select-btn" data-mode="quiz">
+                  <span class="mode-icon">📝</span>
+                  <span>Quiz Mode</span>
+                </button>
+                <button class="mode-select-btn" data-mode="match">
+                  <span class="mode-icon">🎯</span>
+                  <span>Tile Match</span>
+                </button>
+                <button class="mode-select-btn" data-mode="spin">
+                  <span class="mode-icon">🔄</span>
+                  <span>Spin Tiles</span>
+                </button>
+                <button class="mode-select-btn" data-mode="drag">
+                  <span class="mode-icon">✋</span>
+                  <span>Drag & Drop</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Quiz Mode -->
+            <div id="quizGame" class="game-mode hidden">
+              <div class="question-card">
+                <div id="questionText" class="question-text"></div>
+                <div id="answerChoices" class="choices-grid">
+                  <!-- Choices will be generated here -->
+                </div>
+                <div id="feedback" class="feedback"></div>
+              </div>
+            </div>
+
+            <!-- Tile Match Mode -->
+            <div id="matchGame" class="game-mode hidden">
+              <div class="match-grid" id="matchGrid">
+                <!-- Tiles will be generated here -->
+              </div>
+            </div>
+
+            <!-- Spin Tiles Mode -->
+            <div id="spinGame" class="game-mode hidden">
+              <div class="spin-container">
+                <div class="spin-question" id="spinQuestion"></div>
+                <div class="spin-tiles" id="spinTiles">
+                  <!-- Spinning tiles will be generated here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Drag & Drop Mode -->
+            <div id="dragGame" class="game-mode hidden">
+              <div class="drag-container">
+                <div class="drag-source" id="dragSource">
+                  <!-- Draggable tiles -->
+                </div>
+                <div class="drag-targets" id="dragTargets">
+                  <!-- Drop zones -->
+                </div>
+              </div>
+            </div>
+
+            <div class="practice-controls">
+              <button id="nextQuestion" class="primary-btn hidden">Next →</button>
+              <button id="backToModeSelect" class="secondary-btn hidden">Change Mode</button>
+              <button id="backToStudy" class="secondary-btn">Back to Study</button>
+            </div>
+
+            <div class="score-display">
+              <span id="currentScore">Score: 0</span>
+              <span id="streak">Streak: 0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mastery Screen -->
+        <div id="masteryScreen" class="game-screen hidden">
+          <div class="mastery-content">
+            <div class="mastery-icon">🎉</div>
+            <h2 class="screen-title">Topic Mastered!</h2>
+            <p class="mastery-text">You've mastered <span id="masteredTopic"></span></p>
+            <div class="mastery-stats">
+              <div class="stat">
+                <div class="stat-value" id="finalScore">0</div>
+                <div class="stat-label">Score</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value" id="accuracy">0%</div>
+                <div class="stat-label">Accuracy</div>
+              </div>
+            </div>
+            <button id="continueBtn" class="primary-btn">Continue Learning →</button>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
