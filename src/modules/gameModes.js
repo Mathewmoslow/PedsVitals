@@ -48,7 +48,7 @@ export class GameModes {
     return 'quiz';
   }
 
-  // TILE MATCH MODE
+  // TILE MATCH MODE - Match ages to ranges
   startMatchMode() {
     document.getElementById('matchGame').classList.remove('hidden');
     this.matchedPairs.clear();
@@ -60,25 +60,61 @@ export class GameModes {
     const grid = document.getElementById('matchGrid');
     grid.innerHTML = '';
 
-    // Get relevant data based on current topic
-    let pairs = this.getTopicPairs();
+    // Get pairs of ages and their corresponding values
+    const pairs = this.getAgeValuePairs();
 
-    // Duplicate for pairs and shuffle
-    const tiles = [...pairs, ...pairs].sort(() => Math.random() - 0.5);
+    // Create tiles array with both age and value tiles
+    const tiles = [];
+    pairs.forEach((pair, index) => {
+      tiles.push({
+        id: `pair-${index}`,
+        type: 'age',
+        display: pair.age,
+        pairId: index
+      });
+      tiles.push({
+        id: `pair-${index}`,
+        type: 'value',
+        display: pair.value,
+        pairId: index
+      });
+    });
 
-    tiles.forEach((content, index) => {
-      const tile = document.createElement('div');
-      tile.className = 'match-tile';
-      tile.dataset.content = content.value;
-      tile.dataset.id = index;
+    // Shuffle tiles
+    const shuffled = tiles.sort(() => Math.random() - 0.5);
 
-      tile.innerHTML = `
-        <div class="tile-front">?</div>
-        <div class="tile-back">${content.display}</div>
-      `;
+    shuffled.forEach((tile, index) => {
+      const tileElement = document.createElement('div');
+      tileElement.className = 'match-tile';
+      tileElement.dataset.pairId = tile.pairId;
+      tileElement.dataset.type = tile.type;
+      tileElement.dataset.id = index;
 
-      tile.addEventListener('click', () => this.flipTile(tile));
-      grid.appendChild(tile);
+      const tileInner = document.createElement('div');
+      tileInner.className = 'tile-inner';
+
+      const tileFront = document.createElement('div');
+      tileFront.className = 'tile-front';
+      tileFront.innerHTML = tile.type === 'age' ? '👶' : '📊';
+
+      const tileBack = document.createElement('div');
+      tileBack.className = 'tile-back';
+
+      // Style differently based on type
+      if (tile.type === 'age') {
+        tileBack.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+        tileBack.innerHTML = `<div style="font-size: 0.9rem; font-weight: 600;">${tile.display}</div>`;
+      } else {
+        tileBack.style.background = 'linear-gradient(135deg, #00d4ff, #0284c7)';
+        tileBack.innerHTML = `<div style="font-size: 1.1rem; font-weight: 700;">${tile.display}</div>`;
+      }
+
+      tileInner.appendChild(tileFront);
+      tileInner.appendChild(tileBack);
+      tileElement.appendChild(tileInner);
+
+      tileElement.addEventListener('click', () => this.flipTile(tileElement));
+      grid.appendChild(tileElement);
     });
   }
 
@@ -96,18 +132,22 @@ export class GameModes {
 
   checkMatch() {
     const [tile1, tile2] = this.flippedTiles;
-    const match = tile1.dataset.content === tile2.dataset.content;
+
+    // Check if they're a matching pair (same pairId but different types)
+    const match = tile1.dataset.pairId === tile2.dataset.pairId &&
+                  tile1.dataset.type !== tile2.dataset.type;
 
     setTimeout(() => {
       if (match) {
         tile1.classList.add('matched');
         tile2.classList.add('matched');
-        this.matchedPairs.add(tile1.dataset.content);
+        this.matchedPairs.add(tile1.dataset.pairId);
         this.state.score += 10;
         this.state.correct++;
         sfx.correct();
 
-        if (this.matchedPairs.size === 8) {
+        // Check if all pairs are matched
+        if (this.matchedPairs.size >= 8) {
           this.completeMode();
         }
       } else {
@@ -137,26 +177,31 @@ export class GameModes {
     const tilesContainer = document.getElementById('spinTiles');
     tilesContainer.innerHTML = '';
 
-    // Create answer tiles
-    const answers = this.getSpinAnswers(question.correct);
-    answers.forEach(answer => {
-      const tile = document.createElement('div');
-      tile.className = 'spin-tile';
-      tile.textContent = answer;
-      tile.dataset.answer = answer;
+    // Create tiles with ages and values
+    const tiles = this.getSpinTiles(data);
 
-      tile.addEventListener('click', () => this.spinAndCheck(tile, question.correct));
-      tilesContainer.appendChild(tile);
+    tiles.forEach(tile => {
+      const tileElement = document.createElement('div');
+      tileElement.className = 'spin-tile';
+      tileElement.dataset.correct = tile.correct;
+
+      tileElement.innerHTML = `
+        <div style="font-size: 0.8rem; opacity: 0.8;">${tile.age}</div>
+        <div style="font-size: 1.1rem; font-weight: 700;">${tile.value}</div>
+      `;
+
+      tileElement.addEventListener('click', () => this.spinAndCheck(tileElement, tile.correct));
+      tilesContainer.appendChild(tileElement);
     });
   }
 
-  spinAndCheck(tile, correctAnswer) {
+  spinAndCheck(tile, isCorrect) {
     tile.classList.add('spinning');
 
     setTimeout(() => {
       tile.classList.remove('spinning');
 
-      if (tile.dataset.answer === correctAnswer) {
+      if (isCorrect) {
         tile.classList.add('correct');
         this.state.score += 15;
         this.state.correct++;
@@ -192,15 +237,18 @@ export class GameModes {
     sourceContainer.innerHTML = '';
     targetsContainer.innerHTML = '';
 
-    // Create draggable tiles
-    const tiles = this.getDragTiles();
-    tiles.forEach(tile => {
+    // Get age-value pairs for drag and drop
+    const pairs = this.getDragPairs();
+
+    // Create value tiles (to be dragged)
+    pairs.forEach((pair, index) => {
       const element = document.createElement('div');
       element.className = 'drag-tile';
       element.draggable = true;
-      element.textContent = tile.display;
-      element.dataset.value = tile.value;
-      element.dataset.age = tile.age;
+      element.innerHTML = `
+        <div style="font-size: 1.2rem; font-weight: 700;">${pair.value}</div>
+      `;
+      element.dataset.pairId = index;
 
       element.addEventListener('dragstart', (e) => this.handleDragStart(e));
       element.addEventListener('dragend', (e) => this.handleDragEnd(e));
@@ -208,13 +256,15 @@ export class GameModes {
       sourceContainer.appendChild(element);
     });
 
-    // Create drop zones
-    const zones = this.getDropZones();
-    zones.forEach(zone => {
+    // Create age drop zones
+    pairs.forEach((pair, index) => {
       const dropZone = document.createElement('div');
       dropZone.className = 'drop-zone';
-      dropZone.dataset.age = zone.age;
-      dropZone.innerHTML = `<div class="drop-label">${zone.label}</div>`;
+      dropZone.dataset.pairId = index;
+      dropZone.innerHTML = `
+        <div class="drop-label">${pair.age}</div>
+        <div class="drop-placeholder">Drop range here</div>
+      `;
 
       dropZone.addEventListener('dragover', (e) => this.handleDragOver(e));
       dropZone.addEventListener('dragleave', (e) => this.handleDragLeave(e));
@@ -228,6 +278,7 @@ export class GameModes {
     this.draggedElement = e.target;
     e.target.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', e.target.dataset.pairId);
   }
 
   handleDragEnd(e) {
@@ -250,12 +301,20 @@ export class GameModes {
 
     if (!this.draggedElement) return;
 
-    const correct = this.draggedElement.dataset.age === dropZone.dataset.age;
+    const draggedId = this.draggedElement.dataset.pairId;
+    const dropId = dropZone.dataset.pairId;
 
-    if (correct) {
+    if (draggedId === dropId) {
+      // Remove placeholder
+      const placeholder = dropZone.querySelector('.drop-placeholder');
+      if (placeholder) placeholder.remove();
+
+      // Add the tile to the drop zone
       dropZone.appendChild(this.draggedElement);
       dropZone.classList.add('has-tile');
       this.draggedElement.draggable = false;
+      this.draggedElement.classList.add('placed');
+
       this.state.score += 20;
       this.state.correct++;
       sfx.correct();
@@ -278,43 +337,47 @@ export class GameModes {
   }
 
   // Helper methods
-  getTopicPairs() {
+  getAgeValuePairs() {
     const pairs = [];
-    const data = DATA.slice(0, 8);
+    const dataToUse = DATA.slice(0, 8);
 
-    data.forEach(item => {
-      let value, display;
+    dataToUse.forEach(item => {
+      let value = '';
 
       switch(this.state.currentTopic) {
         case 'hr-awake':
-          value = `${item.hr.awake}`;
-          display = `${item.age}: ${item.hr.awake}`;
+          value = `${item.hr.awake} bpm`;
           break;
         case 'hr-sleep':
           if (item.hr.sleep) {
-            value = `${item.hr.sleep}`;
-            display = `${item.age}: ${item.hr.sleep}`;
+            value = `${item.hr.sleep} bpm`;
           }
           break;
         case 'rr':
-          value = `${item.rr}`;
-          display = `${item.age}: ${item.rr}`;
+          value = `${item.rr} breaths/min`;
           break;
         case 'sbp':
-          value = `${item.sbp}`;
-          display = `${item.age}: ${item.sbp}`;
+          value = `${item.sbp} mmHg`;
+          break;
+        case 'temp':
+          value = item.temp;
+          break;
+        case 'approach':
+          value = item.approach.split(',')[0];
           break;
         default:
-          value = item.age;
-          display = item.age;
+          value = `${item.hr.awake} bpm`;
       }
 
       if (value) {
-        pairs.push({ value, display });
+        pairs.push({
+          age: item.age,
+          value: value
+        });
       }
     });
 
-    return pairs.slice(0, 8);
+    return pairs;
   }
 
   getRandomData() {
@@ -327,92 +390,99 @@ export class GameModes {
 
     switch(this.state.currentTopic) {
       case 'hr-awake':
-        text = `Select the awake heart rate for ${data.age}`;
+        text = `Which age group has an awake heart rate of`;
         correct = `${data.hr.awake} bpm`;
         break;
       case 'hr-sleep':
-        text = `Select the sleep heart rate for ${data.age}`;
+        text = `Which age group has a sleep heart rate of`;
         correct = `${data.hr.sleep} bpm`;
         break;
       case 'rr':
-        text = `Select the respiratory rate for ${data.age}`;
+        text = `Which age group has a respiratory rate of`;
         correct = `${data.rr} breaths/min`;
         break;
       case 'sbp':
-        text = `Select the systolic BP for ${data.age}`;
+        text = `Which age group has a systolic BP of`;
         correct = `${data.sbp} mmHg`;
         break;
       default:
-        text = `Select the correct value for ${data.age}`;
+        text = `Which age group matches this value`;
         correct = data.age;
     }
 
-    return { text, correct };
+    return { text: text + ' ' + correct + '?', correct: data.age, value: correct };
   }
 
-  getSpinAnswers(correct) {
-    const answers = [correct];
-    const allValues = this.getAllValuesForTopic();
-
-    while (answers.length < 4) {
-      const random = allValues[Math.floor(Math.random() * allValues.length)];
-      if (!answers.includes(random)) {
-        answers.push(random);
-      }
-    }
-
-    return answers.sort(() => Math.random() - 0.5);
-  }
-
-  getAllValuesForTopic() {
-    switch(this.state.currentTopic) {
-      case 'hr-awake':
-        return DATA.map(d => `${d.hr.awake} bpm`);
-      case 'hr-sleep':
-        return DATA.filter(d => d.hr.sleep).map(d => `${d.hr.sleep} bpm`);
-      case 'rr':
-        return DATA.map(d => `${d.rr} breaths/min`);
-      case 'sbp':
-        return DATA.map(d => `${d.sbp} mmHg`);
-      default:
-        return DATA.map(d => d.age);
-    }
-  }
-
-  getDragTiles() {
+  getSpinTiles(correctData) {
     const tiles = [];
-    DATA.slice(0, 4).forEach(item => {
-      let value, display;
+    const allData = DATA.slice(0, 4);
+
+    allData.forEach(data => {
+      let value = '';
 
       switch(this.state.currentTopic) {
         case 'hr-awake':
-          value = `${item.hr.awake}`;
-          display = `${item.hr.awake} bpm`;
+          value = `${data.hr.awake} bpm`;
+          break;
+        case 'hr-sleep':
+          value = `${data.hr.sleep} bpm`;
           break;
         case 'rr':
-          value = `${item.rr}`;
-          display = `${item.rr} breaths/min`;
+          value = `${data.rr}/min`;
           break;
         case 'sbp':
-          value = `${item.sbp}`;
-          display = `${item.sbp} mmHg`;
+          value = `${data.sbp} mmHg`;
           break;
         default:
-          value = item.age;
-          display = item.age;
+          value = `${data.hr.awake} bpm`;
       }
 
-      tiles.push({ value, display, age: item.age });
+      tiles.push({
+        age: data.age,
+        value: value,
+        correct: data.age === correctData.age
+      });
     });
 
-    return tiles.sort(() => Math.random() - 0.5);
+    return tiles;
   }
 
-  getDropZones() {
-    return DATA.slice(0, 4).map(item => ({
-      age: item.age,
-      label: item.age
-    }));
+  getDragPairs() {
+    const pairs = [];
+    const dataToUse = DATA.slice(0, 4);
+
+    dataToUse.forEach(item => {
+      let value = '';
+
+      switch(this.state.currentTopic) {
+        case 'hr-awake':
+          value = `${item.hr.awake} bpm`;
+          break;
+        case 'hr-sleep':
+          if (item.hr.sleep) {
+            value = `${item.hr.sleep} bpm`;
+          }
+          break;
+        case 'rr':
+          value = `${item.rr}/min`;
+          break;
+        case 'sbp':
+          value = `${item.sbp} mmHg`;
+          break;
+        default:
+          value = `${item.hr.awake} bpm`;
+      }
+
+      if (value) {
+        pairs.push({
+          age: item.age,
+          value: value
+        });
+      }
+    });
+
+    // Shuffle the order of values but keep ages in order
+    return pairs.sort(() => Math.random() - 0.5);
   }
 
   completeMode() {
